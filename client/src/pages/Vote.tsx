@@ -1,44 +1,42 @@
-import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getMatchup, createVote } from '../utils/api';
-import Matchup from '../models/Matchup';
 
 // TODO: Uncomment import statements below after building queries and mutations
-// import { useQuery, useMutation } from '@apollo/client';
-// import { CREATE_VOTE } from '../utils/mutations';
-// import { QUERY_MATCHUPS } from '../utils/queries';
+import { useQuery, useMutation } from '@apollo/client';
+import { CREATE_VOTE } from '../utils/mutations';
+import { QUERY_MATCHUPS } from '../utils/queries';
 
 const Vote = () => {
-  const [matchup, setMatchup] = useState<Matchup>({} as Matchup);
-  let { id } = useParams();
+  const { id } = useParams();
 
-  useEffect(() => {
-    const getMatchupInfo = async () => {
-      try {
-        const res = await getMatchup(id);
-        if (!res.ok) {
-          throw new Error('No matchup');
-        }
-        const matchup: Matchup = await res.json();
-        setMatchup(matchup);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    getMatchupInfo();
-  }, [id]);
+  const { loading, data } = useQuery(QUERY_MATCHUPS, {
+    variables: { _id: id },
+  });
+
+  const matchup = data?.matchups || [];
+
+  const [createVote, {error}] = useMutation(CREATE_VOTE);
+
+  // useEffect(() => {
+  //   const getMatchupInfo = async () => {
+  //     try {
+  //       const res = await getMatchup(id);
+  //       if (!res.ok) {
+  //         throw new Error('No matchup');
+  //       }
+  //       const matchup: Matchup = await res.json();
+  //       setMatchup(matchup);
+  //     } catch (err) {
+  //       console.error(err);
+  //     }
+  //   };
+  //   getMatchupInfo();
+  // }, [id]);
 
   const handleVote = async (techNum: number) => {
     try {
-      const res = await createVote({ id, techNum });
-
-      if (!res.ok) {
-        throw new Error('Could not vote');
-      }
-
-      const matchup: Matchup = await res.json();
-      console.log(matchup);
-      setMatchup(matchup);
+      await createVote({ 
+        variables: {_id: id, techNum: techNum },
+    });
     } catch (err) {
       console.error(err);
     }
@@ -49,6 +47,9 @@ const Vote = () => {
       <div className="card-header bg-dark text-center">
         <h1>Here is the matchup!</h1>
       </div>
+      {loading ? (
+        <div>Loading...</div>
+      ) : (
       <div className="card-body text-center mt-3">
         <h2>
           {matchup.tech1} vs. {matchup.tech2}
@@ -69,6 +70,8 @@ const Vote = () => {
           </Link>
         </div>
       </div>
+      )}
+      {error && <div>{error.message}</div>}
     </div>
   );
 };
